@@ -1,20 +1,88 @@
+import "dotenv/config"
+import "reflect-metadata"
+import cors from "cors"
+import path from "path"
+import morgan from "morgan"
+import express from "express"
+import bodyParser from "body-parser"
+import { verify } from "jsonwebtoken"
+import cookieParser from "cookie-parser"
+import { buildSchema } from "type-graphql"
+import hbs from "nodemailer-express-handlebars"
+import { ApolloServer } from "apollo-server-express"
+
+import { logger, createRefreshToken, sendRefreshToken, transporter } from "./utils"
+import { morganMiddleware } from "./middlewares"
 import { AppDataSource } from "./data-source"
-import { User } from "./entity/User"
+import { UserResolver } from "./resolvers"
+import { JwtPayload } from "./MyContext"
+import { User } from "./entity"
 
-AppDataSource.initialize().then(async () => {
+(async () => {
+  const app = express()
 
-    console.log("Inserting a new user into the database...")
-    const user = new User()
-    user.firstName = "Timber"
-    user.lastName = "Saw"
-    user.age = 25
-    await AppDataSource.manager.save(user)
-    console.log("Saved a new user with id: " + user.id)
+  const hbsConfig = {
+    viewEngine: {
+      extName: '.hbs',
+      partialsDir: path.join(process.cwd(), './views/'),
+      layoutsDir: path.join(process.cwd(), '/views/'),
+    },
+    viewPath: path.join(process.cwd(), './views/'),
+    extName: '.hbs',
+  }
 
-    console.log("Loading users from the database...")
-    const users = await AppDataSource.manager.find(User)
-    console.log("Loaded users: ", users)
+  transporter.use('compile', hbs(hbsConfig))
+  app.use(express.static('public'))
+  app.use(cors({
+    origin: process.env.URL_SITE,
+    credentials: true
+  }))
+  app.use(cookieParser())
+  app.use(bodyParser.json());
+  app.use(morgan(':graphql-query'))
+  app.use(morganMiddleware)
+  const PORT = process.env.PORT || 3000
+  app.get('/', (_req, res) => res.send(":)"))
+  app.post("/refresh", async (req, res) => {
+    const token = req.cookies.jid
+    if (!token) {
+      return res.send({ ok: false, token: "" })
+    }
 
-    console.log("Here you can setup and run express / fastify / any other framework.")
+    let payload: JwtPayload;
 
-}).catch(error => console.log(error))
+    try {
+      payload = verify(token, process.env.REFRESH_TOKEN_SECRET!) as JwtPayload
+    } catch (error) {
+      logger.error(error)
+      return res.send({ ok: false, token: "" })
+    }
+
+    const user = await User.findOne({ where: { id: payload.userId } })
+
+    if (!user || user.tokenVersion !== payload.tokenVersion) {
+      return res.send({ ok: false, token: "" })
+    }
+
+    sendRefreshToken(res, await createRefreshToken(user))
+
+    return res.send({ ok: true, token: await createRefreshToken(user) })
+  })
+
+  await AppDataSource.initialize()
+
+  const apolloServer = new ApolloServer({
+    schema:  await buildSchema({
+      resolvers: [UserResolver]
+    }),
+    context: ({ req, res }) => ({ req, res })
+  })
+
+  await apolloServer.start()
+  apolloServer.applyMiddleware({ app, cors: {
+    origin: process.env.URL_SITE,
+    credentials: true
+  }})
+
+  app.listen(PORT, () => logger.info("🐲 [Server] Initialized"))
+})()

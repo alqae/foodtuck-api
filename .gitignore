@@ -4,3 +4,8 @@ node_modules/
 build/
 tmp/
 temp/
+yarn-error.log
+logs/
+dist/
+.env
+package-lock.json
