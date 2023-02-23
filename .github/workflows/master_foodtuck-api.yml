@@ -19,19 +19,13 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v1
         with:
-          node-version: '14.x'
-          cache: 'yarn'
-
-    - name: Run install
-      uses: borales/actions-yarn@v4
-      with:
-        cmd: install # will run `yarn install` command
+          node-version: '16.x'
 
       - name: npm install, build, and test
         run: |
-          yarn install
-          yarn run build --if-present
-          yarn run test --if-present
+          npm install
+          npm run build --if-present
+          npm run test --if-present
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v2
@@ -58,5 +52,5 @@ jobs:
         with:
           app-name: 'foodtuck-api'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_5ED8F8E0C2494F168DC249872F53E374 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9F9F2E4ECF9743B2B6D6FB143457F469 }}
           package: .
