@@ -61,6 +61,10 @@ export class UserResolver {
     @Arg("lastName") lastName: string,
     @Arg("password") password: string,
   ): Promise<boolean> {
+    if (await User.findOne({ where: { email } })) {
+      throw new Error("Email already in use")
+    }
+
     try {
       const hashedPassword = await hash(password, 12)
       await User.insert({ firstName, lastName, email, password: hashedPassword })
@@ -86,8 +90,8 @@ export class UserResolver {
         ]
       } as MailOptions)
     } catch (error) {
-      console.error(error)
-      return false
+      logger.error(error)
+      throw new Error("Error creating user")
     }
 
     return true
@@ -100,7 +104,7 @@ export class UserResolver {
     @Ctx() ctx: MyContext
   ): Promise<SignInSuccess> {
     const user = await User.findOne({ where: { email } })
-
+    console.warn('user', user);
     if (!user || !user?.isActive) {
       throw new Error("Invalid login")
     }
