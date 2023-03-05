@@ -12,9 +12,9 @@ import hbs from "nodemailer-express-handlebars"
 import { ApolloServer } from "apollo-server-express"
 
 import { logger, createRefreshToken, sendRefreshToken, transporter } from "./utils"
+import { ProductResolver, UserResolver } from "./resolvers"
 import { morganMiddleware } from "./middlewares"
 import { AppDataSource } from "./data-source"
-import { UserResolver } from "./resolvers"
 import { JwtPayload } from "./MyContext"
 import { User } from "./entity"
 
@@ -73,7 +73,7 @@ import { User } from "./entity"
 
   const apolloServer = new ApolloServer({
     schema:  await buildSchema({
-      resolvers: [UserResolver]
+      resolvers: [UserResolver, ProductResolver]
     }),
     context: ({ req, res }) => ({ req, res })
   })

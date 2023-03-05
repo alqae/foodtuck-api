@@ -1,5 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, BaseEntity } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, OneToMany, BeforeInsert } from "typeorm"
 import { ObjectType, Field, Int } from "type-graphql"
+import { Product } from "./Product"
+import { genSalt, hash } from "bcryptjs"
 
 @ObjectType()
 @Entity("users")
@@ -29,4 +31,13 @@ export class User extends BaseEntity {
 
   @Column("int", { default: 0 })
   tokenVersion: number
+
+  @OneToMany(() => Product, (product) => product.user)
+  products: Product[]
+
+  @BeforeInsert()
+  async setPassword(password: string) {
+    const salt = await genSalt()
+    this.password = await hash(password || this.password, salt)
+  }
 }

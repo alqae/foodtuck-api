@@ -104,7 +104,7 @@ export class UserResolver {
     @Ctx() ctx: MyContext
   ): Promise<SignInSuccess> {
     const user = await User.findOne({ where: { email } })
-    console.warn('user', user);
+
     if (!user || !user?.isActive) {
       throw new Error("Invalid login")
     }

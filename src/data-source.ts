@@ -1,7 +1,7 @@
 import "reflect-metadata"
 import { DataSource } from "typeorm"
 
-import { User, Token } from "./entity"
+import { User, Token, Product } from "./entity"
 
 export const AppDataSource = new DataSource({
     type: "postgres",
@@ -12,10 +12,10 @@ export const AppDataSource = new DataSource({
     database: process.env.DB_NAME || "foodtuck",
     synchronize: true,
     logging: false,
-    entities: [User, Token],
+    entities: [User, Product, Token],
     migrations: [],
-    ssl: {
+    ssl: process.env.NODE_ENV === "production" ? {
       rejectUnauthorized: false,
-    },
+    } : false,
     subscribers: [],
 })
